@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/30160476/README.md)
 # 가열 곡선 탐구 실험실 (State-Change Heating Curve Lab)
 
 중학교 1학년 과학 수업용 가상 실험 웹앱입니다. -20°C 얼음을 가열해 수증기가 될 때까지의 온도 변화를 관찰하며, 학생들이 스스로 녹는점·끓는점(상태 변화 중 온도가 일정하게 유지되는 구간)을 찾아내도록 설계된 탐구형 시뮬레이션입니다.
