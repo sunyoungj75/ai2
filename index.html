@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가열 곡선 탐구 실험실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#0B1D26;
+    --bg-panel:#122E3A;
+    --bg-panel-2:#0F2530;
+    --ice:#6EC3E0;
+    --water:#3FD6C5;
+    --steam:#F5F7F5;
+    --amber:#FF8A3D;
+    --amber-dim:#8a4d24;
+    --grid:rgba(255,255,255,0.08);
+    --text:#EAF2F5;
+    --muted:#8FAAB4;
+    --danger:#FF6B6B;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #163847 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, #1a2e2a 0%, transparent 55%),
+      var(--bg-deep);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:20px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+
+  .nameplate{
+    max-width:1180px;margin:0 auto 18px auto;
+    display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--grid);
+    padding-bottom:14px;
+    flex-wrap:wrap;gap:8px;
+  }
+  .nameplate h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:1.5rem;font-weight:700;margin:0;
+    letter-spacing:0.01em;
+  }
+  .nameplate h1 span{color:var(--amber);}
+  .nameplate p{margin:0;color:var(--muted);font-size:0.85rem;}
+
+  .wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+  .grid{display:grid;grid-template-columns: 300px 1fr;gap:16px;}
+  @media (max-width:900px){.grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:linear-gradient(180deg,var(--bg-panel),var(--bg-panel-2));
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:var(--radius);
+    padding:16px;
+  }
+  .panel h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.78rem;font-weight:600;letter-spacing:0.08em;
+    text-transform:uppercase;color:var(--muted);margin:0 0 12px 0;
+  }
+
+  /* controls */
+  .field{margin-bottom:16px;}
+  .field label{display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px;color:var(--text);}
+  .field label .val{font-family:'JetBrains Mono',monospace;color:var(--amber);font-weight:700;}
+  input[type=range]{
+    width:100%;-webkit-appearance:none;height:6px;border-radius:3px;
+    background:linear-gradient(90deg,var(--ice),var(--amber));
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:var(--text);border:3px solid var(--amber);cursor:pointer;
+  }
+  .pressure-btns{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  .pbtn{
+    padding:8px 2px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);
+    background:rgba(255,255,255,0.03);color:var(--muted);font-family:'JetBrains Mono',monospace;
+    font-size:0.72rem;cursor:pointer;text-align:center;transition:all .15s;
+  }
+  .pbtn.active{background:var(--amber);color:#1a1005;border-color:var(--amber);font-weight:700;}
+  .pbtn:hover{border-color:var(--amber);}
+
+  .btnrow{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;}
+  button.action{
+    flex:1;padding:10px 8px;border-radius:10px;border:none;cursor:pointer;
+    font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.85rem;
+    transition:transform .1s;
+  }
+  button.action:active{transform:scale(0.96);}
+  .btn-start{background:var(--amber);color:#1a1005;}
+  .btn-pause{background:rgba(255,255,255,0.1);color:var(--text);}
+  .btn-reset{background:rgba(255,255,255,0.05);color:var(--muted);border:1px solid rgba(255,255,255,0.1);}
+  button.action:disabled{opacity:0.35;cursor:not-allowed;}
+
+  .toggle-row{display:flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--muted);margin-top:10px;}
+  .toggle-row input{accent-color:var(--amber);width:16px;height:16px;}
+
+  .hint{font-size:0.75rem;color:var(--muted);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.1);}
+
+  /* microscope */
+  .scope-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:14px;}
+  .scope-frame{
+    position:relative;width:230px;height:230px;border-radius:50%;
+    background:#03110a;
+    box-shadow:inset 0 0 40px rgba(0,0,0,0.8), 0 0 0 6px #0a2530, 0 0 0 8px rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .scope-frame canvas{position:absolute;top:0;left:0;border-radius:50%;}
+  .phase-tag{
+    font-family:'JetBrains Mono',monospace;font-size:0.8rem;font-weight:700;
+    padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.06);
+    color:var(--amber);letter-spacing:0.03em;
+  }
+
+  /* readouts */
+  .readouts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;}
+  .ro{background:rgba(0,0,0,0.25);border-radius:10px;padding:8px 10px;}
+  .ro .label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .ro .value{font-family:'JetBrains Mono',monospace;font-size:1.05rem;color:var(--text);font-weight:700;}
+  @media (max-width:700px){.readouts{grid-template-columns:repeat(2,1fr);}}
+
+  .progress-wrap{margin-top:10px;display:none;}
+  .progress-wrap.show{display:block;}
+  .progress-label{font-size:0.72rem;color:var(--muted);margin-bottom:4px;}
+  .progress-bar{height:8px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--water),var(--amber));width:0%;transition:width .1s linear;}
+
+  /* chart */
+  .chart-panel canvas{width:100%;display:block;border-radius:10px;background:#081920;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:0.75rem;color:var(--muted);}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;}
+  .predict-controls{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .predict-btn{
+    background:none;border:1px solid rgba(255,255,255,0.15);color:var(--muted);
+    padding:6px 12px;border-radius:8px;font-size:0.75rem;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  .predict-btn:hover{border-color:var(--amber);color:var(--amber);}
+
+  /* reflection */
+  .qgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:800px){.qgrid{grid-template-columns:1fr;}}
+  .qbox{background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;}
+  .qbox .qnum{color:var(--amber);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.8rem;}
+  .qbox p.qtext{margin:6px 0 8px 0;font-size:0.88rem;line-height:1.5;}
+  .qbox textarea{
+    width:100%;min-height:64px;background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text);
+    padding:8px;font-family:'Inter',sans-serif;font-size:0.85rem;resize:vertical;
+  }
+  .qbox textarea:focus{outline:none;border-color:var(--amber);}
+  .step-badge{
+    display:inline-block;background:var(--amber);color:#1a1005;font-weight:700;
+    font-size:0.7rem;padding:2px 8px;border-radius:20px;margin-right:8px;font-family:'JetBrains Mono',monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="nameplate">
+  <div>
+    <h1>가열 곡선 탐구 <span>실험실</span></h1>
+    <p>-20°C 얼음 → 수증기, 압력과 양을 바꿔가며 녹는점·끓는점을 스스로 찾아보세요</p>
+  </div>
+  <p class="mono" style="color:var(--muted);">STATE-CHANGE LAB · v1</p>
+</div>
+
+<div style="max-width:1180px;margin:0 auto 16px auto;display:flex;gap:8px;">
+  <button class="pbtn active" id="modeStudentBtn" style="flex:0 0 auto;padding:8px 18px;">🎓 학생 모드</button>
+  <button class="pbtn" id="modeTeacherBtn" style="flex:0 0 auto;padding:8px 18px;">🧑‍🏫 교사 모드</button>
+</div>
+
+<div id="studentView">
+
+<div id="accessGate" class="panel" style="max-width:480px;margin:40px auto;">
+  <h2>학생 확인</h2>
+  <div class="field">
+    <label>학번 (5자리 숫자)</label>
+    <input type="text" id="gateIdInput" placeholder="예: 10100" inputmode="numeric" maxlength="5" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:1rem;">
+  </div>
+  <div class="field">
+    <label>이름</label>
+    <input type="text" id="gateNameInput" placeholder="예: 홍길동" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'Inter',sans-serif;font-size:1rem;">
+  </div>
+  <button class="action btn-start" id="gateEnterBtn" style="width:100%;">입장하기</button>
+</div>
+
+<div id="studentContent" style="display:none;">
+
+<div class="panel" style="max-width:1180px;margin:0 auto 16px auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+  <span class="mono" style="font-size:0.85rem;color:var(--muted);">✓ <span id="verifiedTag"></span>으로 확인됨</span>
+  <span style="flex:1;"></span>
+  <button class="action btn-start" id="submitBtn" style="flex:0 0 auto;padding:8px 18px;">📤 선생님께 제출하기</button>
+  <span id="submitStatus" class="mono" style="font-size:0.8rem;color:var(--muted);"></span>
+</div>
+
+<div class="wrap">
+
+  <div class="grid">
+    <!-- LEFT: controls + microscope -->
+    <div class="panel">
+      <h2>실험 조건 설정</h2>
+
+      <div class="field">
+        <label>물의 양 (질량) <span class="val" id="massVal">100 g</span></label>
+        <input type="range" id="massSlider" min="50" max="200" step="50" value="100">
+      </div>
+
+      <div class="field">
+        <label>압력 조건</label>
+        <div class="pressure-btns" id="pressureBtns"></div>
+      </div>
+
+      <div class="btnrow">
+        <button class="action btn-start" id="startBtn">▶ 가열 시작</button>
+        <button class="action btn-pause" id="pauseBtn" disabled>일시정지</button>
+      </div>
+      <div class="btnrow">
+        <button class="action btn-reset" id="resetBtn">↺ 초기화</button>
+      </div>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="overlayToggle">
+        <label for="overlayToggle">이전 실험 결과 겹쳐서 비교하기</label>
+      </div>
+
+      <div class="hint">
+        💡 같은 압력에서 <b>질량만 바꿔가며</b> 겹쳐보기를 켜고 반복 실험해보세요. 평평한 구간의 <b>온도</b>는 그대로인지, <b>길이(폭)</b>는 어떻게 달라지는지 비교해보세요.
+      </div>
+
+      <div class="scope-wrap">
+        <div class="phase-tag" id="phaseTag">고체 (얼음)</div>
+        <div class="scope-frame">
+          <canvas id="particleCanvas" width="230" height="230"></canvas>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);">🔬 미시적 관찰 (입자 모형)</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: chart + readouts -->
+    <div class="panel chart-panel">
+      <h2>가열 곡선 (시간 – 온도 그래프)</h2>
+      <canvas id="chartCanvas" width="860" height="420"></canvas>
+
+      <div class="predict-controls">
+        <span style="font-size:1.125rem;color:var(--amber);font-weight:700;">그래프 위에서 마우스를 눌러 드래그하며 예측선을 그려보세요 (시작 전에만 가능)</span>
+        <button class="predict-btn" id="clearPredictBtn">예측선 지우기</button>
+      </div>
+
+      <div class="legend">
+        <span><span class="dot" style="background:var(--amber);"></span>실제 관찰 곡선</span>
+        <span><span class="dot" style="background:#ffb37a;border:1px dashed #ffb37a;"></span>나의 예측선</span>
+        <span><span class="dot" style="background:#5f7a84;"></span>이전 실험 (비교)</span>
+      </div>
+      <div class="toggle-row" style="margin-top:8px;">
+        <input type="checkbox" id="answerLineToggle">
+        <label for="answerLineToggle" style="font-size:1.5em;">녹는점·끓는점 정답선 보기 (평평한 구간을 먼저 스스로 찾아본 뒤에 켜보세요)</label>
+      </div>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:6px;">🖱️ 실험을 멈추거나 마친 뒤, 그래프 위에 마우스를 가져가 보세요 — 그 순간의 입자 배열을 현미경 화면에서 다시 볼 수 있어요.</div>
+
+      <div class="readouts">
+        <div class="ro"><div class="label">경과 시간</div><div class="value mono" id="roTime">0:00</div></div>
+        <div class="ro"><div class="label">온도</div><div class="value mono" id="roTemp">-20 °C</div></div>
+        <div class="ro"><div class="label">상태</div><div class="value mono" id="roPhase">고체</div></div>
+        <div class="ro"><div class="label">투입 에너지</div><div class="value mono" id="roEnergy">0 J</div></div>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label" id="progressLabel">상태 변화 진행률</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reflection questions -->
+  <div class="panel">
+    <h2>탐구 질문 — 스스로 답을 찾아보세요</h2>
+    <div class="qgrid">
+      <div class="qbox">
+        <span class="step-badge">예측</span>
+        <p class="qtext">실험을 시작하기 전, 그래프를 클릭해 예측선을 그려보세요. 계속 가열하면 온도는 어떻게 변할 것 같나요? 왜 그렇게 생각했나요?</p>
+        <textarea id="q1" placeholder="내 예측: 온도는 계속 올라갈 것이다 / 어느 순간 멈출 것 같다 등... 이유를 적어보세요."></textarea>
+      </div>
+      <div class="qbox">
+        <span class="step-badge">발견</span>
+        <p class="qtext">실제 그래프에서 온도가 평평해지는 구간을 찾았나요? 그 구간에서도 가열은 계속되고 있었나요?</p>
+        <textarea id="q2" placeholder="평평한 구간이 나타난 시간과 온도를 적어보세요."></textarea>
+      </div>
+      <div class="qbox">
+        <span class="step-badge">질문</span>
+        <p class="qtext">평평한 구간에서 계속 넣어준 열에너지는 어디로 사라진 걸까요? 미시적 관찰(입자 모형)에서 힌트를 찾아보세요.</p>
+        <textarea id="q3" placeholder="입자의 움직임(속도)과 배열(거리)이 어떻게 달라졌는지 관찰한 내용을 적어보세요."></textarea>
+      </div>
+      <div class="qbox">
+        <span class="step-badge">비교</span>
+        <p class="qtext">물의 양(질량)을 바꿔서 다시 실험해보세요. 녹는점과 끓는점 온도, 그리고 평평한 구간의 길이는 각각 어떻게 달라졌나요?</p>
+        <textarea id="q4" placeholder="양이 많아지면 무엇이 같고 무엇이 달라지는지 적어보세요."></textarea>
+      </div>
+      <div class="qbox">
+        <span class="step-badge">비교</span>
+        <p class="qtext">압력을 바꿔서 실험해보세요. 끓는점은 어떻게 달라졌나요? 압력솥이 음식을 빨리 익히는 이유와 연결지어 설명해보세요.</p>
+        <textarea id="q5" placeholder="압력이 높아지면 끓는점이 어떻게 변하는지, 그 이유를 생각나는 대로 적어보세요."></textarea>
+      </div>
+      <div class="qbox">
+        <span class="step-badge">설명</span>
+        <p class="qtext">친구에게 설명한다면? "물질이 상태 변화를 하는 동안에는 계속 가열해도 온도가 오르지 않는 이유"를 나의 말로 설명해보세요.</p>
+        <textarea id="q6" placeholder="나의 설명: ..."></textarea>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /studentContent -->
+
+</div><!-- /studentView -->
+
+<div id="teacherView" style="display:none;max-width:1180px;margin:0 auto;">
+
+  <div id="teacherGate" class="panel" style="max-width:420px;margin:40px auto;">
+    <h2>교사 인증</h2>
+    <div class="field">
+      <label>비밀번호</label>
+      <input type="password" id="teacherPwInput" placeholder="비밀번호를 입력하세요" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 12px;color:var(--text);font-size:1rem;">
+    </div>
+    <button class="action btn-start" id="teacherEnterBtn" style="width:100%;">확인</button>
+    <div style="font-size:0.7rem;color:var(--muted);margin-top:10px;">비밀번호를 알고 있는 교사만 접속할 수 있습니다.</div>
+  </div>
+
+  <div id="teacherContent" style="display:none;">
+  <div class="panel">
+    <h2>학생 제출 현황</h2>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="action btn-pause" id="refreshSubmissionsBtn" style="flex:0 0 auto;padding:8px 16px;">🔄 새로고침</button>
+      <button class="action btn-start" id="copySheetBtn" style="flex:0 0 auto;padding:8px 16px;">📋 구글 시트에 붙여넣기용 복사</button>
+      <button class="action btn-pause" id="downloadCsvBtn" style="flex:0 0 auto;padding:8px 16px;">⬇ CSV 다운로드</button>
+      <button class="action btn-reset" id="clearSubmissionsBtn" style="flex:0 0 auto;padding:8px 16px;">🗑 전체 삭제</button>
+      <span id="teacherStatus" class="mono" style="font-size:0.8rem;color:var(--muted);"></span>
+    </div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px;">💡 구글 시트로 보려면: 새 구글 시트를 열고 A1 셀을 클릭한 뒤 <b>"구글 시트에 붙여넣기용 복사"</b>를 눌러 복사한 내용을 그대로 붙여넣기(Ctrl+V) 하세요. 열이 자동으로 나뉘어 들어가요. (또는 CSV로 다운로드해서 파일 &gt; 가져오기로 열어도 됩니다.)</div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-bottom:14px;">⚠️ 학생 데이터는 이 실험실 링크를 사용하는 모든 사람에게 공유되는 저장소에 기록돼요. 학생들에게 미리 안내해 주세요.</div>
+    <div id="submissionsList"></div>
+  </div>
+
+  </div><!-- /teacherContent -->
+
+</div>
+
+<script>
+(function(){
+  // ---------- physical constants (simplified, educational) ----------
+  const C_ICE = 2.1, C_WATER = 4.18, C_STEAM = 2.0; // J/g°C
+  const LF = 334, LV = 2260; // J/g
+  const P_POWER = 800; // W (constant heating power)
+  const T_START = -20;
+  const GAS_END_OFFSET = 15;
+  const BASE_WALL_SECONDS = 52; // target real-world seconds for a full run at 1x (2x slower than before)
+  const Y_MIN = -20, Y_MAX = 160; // fixed temperature axis, 10°C gridlines, so comparisons are valid
+
+  // Display-time stretch/compress factors per segment (order: ice-heat, melting, water-heat,
+  // vaporizing, steam-heat). These only reshape how much of the time axis each stage occupies —
+  // they don't change the temperatures shown, just the pacing/width on the graph.
+  const SEG_DT_SCALE = [1, 1, 1, 0.5, 15.87];
+  // → boiling ends & temp resumes rising around 4:00, and the post-100°C rise now
+  //   stretches out to fill the timeline to about 5:00 (default 100g @ 1atm).
+
+
+  const PRESSURES = [
+    {atm:0.5, tb:82},
+    {atm:1.0, tb:100},
+    {atm:1.5, tb:112},
+    {atm:2.0, tb:120},
+    {atm:3.0, tb:134},
+  ];
+
+  // ---------- state ----------
+  let mass = 100;
+  let pIndex = 1; // default 1 atm
+  let segments = [];
+  let totalSimSeconds = 0;
+  let simTime = 0;
+  let running = false;
+  let finished = false;
+  let lastTs = null;
+  let dataPoints = []; // {t, temp}
+  let pastRuns = []; // {mass, atm, tb, totalSimSeconds, points, color}
+  let predictionPoints = []; // {t, temp} in data space
+  let showAnswerLines = false; // hidden by default — students find the plateaus themselves first
+  let xViewStart = 0, xViewEnd = 1;
+  const runColors = ['#5f7a84','#7d8f6b','#8a6b8f','#6b7f8f'];
+
+  // ---------- particles ----------
+  const N_PARTICLES = 48;
+  let particles = [];
+  const pctx = document.getElementById('particleCanvas').getContext('2d');
+  const PW = 230, PH = 230;
+  // the beaker: solid & liquid stay inside these walls; gas is free to cross them and fill the whole view
+  const CONTAINER = {left:60, right:170, top:95, bottom:200};
+
+  function initParticles(){
+    particles = [];
+    const cols = 8, rows = 6;
+    const pad = 12;
+    const spacingX = (CONTAINER.right-CONTAINER.left-pad*2)/(cols-1);
+    const spacingY = (CONTAINER.bottom-CONTAINER.top-pad*2)/(rows-1);
+    let i=0;
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        if(i>=N_PARTICLES) break;
+        const lx = CONTAINER.left+pad + c*spacingX;
+        const ly = CONTAINER.top+pad + r*spacingY;
+        particles.push({
+          lx, ly, // lattice site (solid arrangement)
+          x: lx, y: ly, vx:(Math.random()-0.5)*0.6, vy:(Math.random()-0.5)*0.6, // liquid wander state
+          gx: Math.random()*PW, gy: Math.random()*PH, gvx:(Math.random()-0.5)*2, gvy:(Math.random()-0.5)*2, // gas flight state
+          phaseOffset: Math.random()*Math.PI*2,
+          vapThresh: Math.random()*0.85 // when (as a fraction of the boiling plateau) this particle individually escapes to gas
+        });
+        i++;
+      }
+    }
+  }
+  initParticles();
+
+  // ---------- build segments ----------
+  function buildSegments(m, tb){
+    const q1 = m*C_ICE*(0-T_START);
+    const q2 = m*LF;
+    const q3 = m*C_WATER*(tb-0);
+    const q4 = m*LV;
+    const q5 = m*C_STEAM*GAS_END_OFFSET;
+    const qs = [q1,q2,q3,q4,q5];
+    const defs = [
+      {name:'ice-heat', type:'heat', tempStart:T_START, tempEnd:0, label:'고체(얼음) 가열'},
+      {name:'melting', type:'phase', tempStart:0, tempEnd:0, label:'융해 (고체→액체)'},
+      {name:'water-heat', type:'heat', tempStart:0, tempEnd:tb, label:'액체(물) 가열'},
+      {name:'vaporizing', type:'phase', tempStart:tb, tempEnd:tb, label:'기화 (액체→기체)'},
+      {name:'steam-heat', type:'heat', tempStart:tb, tempEnd:tb+GAS_END_OFFSET, label:'기체(수증기) 가열'},
+    ];
+    let tCum = 0, qCum = 0;
+    const segs = defs.map((d,idx)=>{
+      const q = qs[idx];
+      const dt = (q/P_POWER) * SEG_DT_SCALE[idx];
+      const seg = {...d, qStart:qCum, qEnd:qCum+q, tStart:tCum, tEnd:tCum+dt};
+      qCum += q; tCum += dt;
+      return seg;
+    });
+    return {segs, total:tCum};
+  }
+
+  function recompute(){
+    const tb = PRESSURES[pIndex].tb;
+    const built = buildSegments(mass, tb);
+    segments = built.segs;
+    totalSimSeconds = built.total;
+    updateXView();
+  }
+
+  // Always show the whole timeline linearly (0 → total), so the graph looks the same
+  // throughout the run and lines up simply with past runs for comparison.
+  function updateXView(){
+    let fullEnd = totalSimSeconds;
+    pastRuns.forEach(r=> fullEnd = Math.max(fullEnd, r.totalSimSeconds));
+    xViewStart = 0;
+    xViewEnd = fullEnd * 1.03;
+  }
+
+  // ---------- UI: pressure buttons ----------
+  const pBtnWrap = document.getElementById('pressureBtns');
+  PRESSURES.forEach((p, idx)=>{
+    const b = document.createElement('div');
+    b.className = 'pbtn' + (idx===pIndex ? ' active' : '');
+    b.textContent = p.atm + ' atm';
+    b.dataset.idx = idx;
+    b.addEventListener('click', ()=>{
+      if(running) return;
+      pIndex = idx;
+      document.querySelectorAll('.pbtn').forEach(el=>el.classList.remove('active'));
+      b.classList.add('active');
+      recompute();
+      drawChart();
+    });
+    pBtnWrap.appendChild(b);
+  });
+
+  const massSlider = document.getElementById('massSlider');
+  const massVal = document.getElementById('massVal');
+  massSlider.addEventListener('input', ()=>{
+    mass = parseInt(massSlider.value,10);
+    massVal.textContent = mass + ' g';
+    if(!running){
+      recompute();
+      drawChart();
+    }
+  });
+
+  // ---------- buttons ----------
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const overlayToggle = document.getElementById('overlayToggle');
+  const answerLineToggle = document.getElementById('answerLineToggle');
+  answerLineToggle.addEventListener('change', ()=>{
+    showAnswerLines = answerLineToggle.checked;
+    drawChart();
+  });
+  const clearPredictBtn = document.getElementById('clearPredictBtn');
+
+  startBtn.addEventListener('click', ()=>{
+    if(finished) return;
+    if(!running){
+      if(dataPoints.length===0){
+        recompute();
+      }
+      running = true;
+      lastTs = null;
+      startBtn.textContent = '가열 중...';
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+      massSlider.disabled = true;
+      document.querySelectorAll('.pbtn').forEach(el=>el.style.pointerEvents='none');
+      requestAnimationFrame(loop);
+    }
+  });
+
+  pauseBtn.addEventListener('click', ()=>{
+    running = false;
+    startBtn.disabled = false;
+    startBtn.textContent = '▶ 계속 가열';
+    updateXView();
+    drawChart();
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    if(overlayToggle.checked && dataPoints.length>0){
+      pastRuns.push({
+        mass, atm:PRESSURES[pIndex].atm, tb:PRESSURES[pIndex].tb,
+        totalSimSeconds, points:[...dataPoints],
+        color: runColors[pastRuns.length % runColors.length]
+      });
+      if(pastRuns.length>4) pastRuns.shift();
+    }
+    running = false; finished = false; simTime = 0; dataPoints = [];
+    tailElapsed = 0; lastPushed = -1;
+    predictionPoints = [];
+    startBtn.disabled = false; startBtn.textContent = '▶ 가열 시작';
+    pauseBtn.disabled = true;
+    massSlider.disabled = false;
+    document.querySelectorAll('.pbtn').forEach(el=>el.style.pointerEvents='auto');
+    initParticles();
+    recompute();
+    drawChart();
+    drawParticles(T_START, 'ice-heat', 0);
+    updateReadouts(T_START, segments[0]);
+    document.getElementById('progressWrap').classList.remove('show');
+    document.getElementById('phaseTag').textContent = '고체 (얼음)';
+  });
+
+  clearPredictBtn.addEventListener('click', ()=>{
+    predictionPoints = [];
+    drawChart();
+  });
+
+  // ---------- chart click for prediction ----------
+  const chartCanvas = document.getElementById('chartCanvas');
+  const cctx = chartCanvas.getContext('2d');
+  const CW = chartCanvas.width, CH = chartCanvas.height;
+  const PAD = {l:56, r:20, t:28, b:46};
+
+  function formatTime(t){
+    const totalSec = Math.max(0, Math.round(t));
+    const m = Math.floor(totalSec/60);
+    const s = totalSec%60;
+    return m + ':' + String(s).padStart(2,'0');
+  }
+
+  function dataToPx(t, temp){
+    const xFrac = (xViewEnd>xViewStart) ? (t-xViewStart)/(xViewEnd-xViewStart) : 0;
+    const x = PAD.l + xFrac * (CW-PAD.l-PAD.r);
+    const y = PAD.t + (1 - (temp-Y_MIN)/(Y_MAX-Y_MIN)) * (CH-PAD.t-PAD.b);
+    return [x,y];
+  }
+  function pxToData(x,y){
+    // used only while drawing predictions, which only happens in linear mode (before a run)
+    const t = xViewStart + ((x-PAD.l)/(CW-PAD.l-PAD.r)) * (xViewEnd-xViewStart);
+    const temp = Y_MIN + (1 - (y-PAD.t)/(CH-PAD.t-PAD.b)) * (Y_MAX-Y_MIN);
+    return [t,temp];
+  }
+
+  let isDrawingPrediction = false;
+
+  function eventToCanvasXY(e){
+    const rect = chartCanvas.getBoundingClientRect();
+    const scaleX = CW/rect.width, scaleY = CH/rect.height;
+    const x = (e.clientX-rect.left)*scaleX;
+    const y = (e.clientY-rect.top)*scaleY;
+    return [x,y];
+  }
+
+  function addPredictionPointFromEvent(e, isStart){
+    const [x,y] = eventToCanvasXY(e);
+    const cx = Math.min(Math.max(x, PAD.l), CW-PAD.r);
+    const cy = Math.min(Math.max(y, PAD.t), CH-PAD.b);
+    const [t, temp] = pxToData(cx,cy);
+    if(isStart){
+      predictionPoints = [{t, temp}];
+    } else if(predictionPoints.length===0){
+      predictionPoints.push({t, temp});
+    } else {
+      const lastT = predictionPoints[predictionPoints.length-1].t;
+      if(t > lastT){
+        predictionPoints.push({t, temp});
+      } else {
+        // pen moved backward/vertically over the same moment in time — just update the height there
+        predictionPoints[predictionPoints.length-1] = {t: lastT, temp};
+      }
+    }
+    drawChart();
+  }
+
+  let hoverActive = false, hoverT = 0;
+
+  function restoreParticleViewToCurrent(){
+    const seg = currentSegmentAt(simTime);
+    const temp = tempAt(simTime, seg);
+    const frac = seg.type==='phase' ? Math.min(1,Math.max(0,(simTime-seg.tStart)/(seg.tEnd-seg.tStart))) : 0;
+    drawParticles(temp, seg.name, frac);
+    document.getElementById('phaseTag').textContent = phaseLabelKor[seg.name];
+  }
+
+  function handleHoverScrub(e){
+    if(running || dataPoints.length===0){
+      if(hoverActive){ hoverActive=false; drawChart(); }
+      return;
+    }
+    const [x,y] = eventToCanvasXY(e);
+    if(x<PAD.l || x>CW-PAD.r || y<PAD.t || y>CH-PAD.b){
+      if(hoverActive){ hoverActive=false; drawChart(); restoreParticleViewToCurrent(); }
+      return;
+    }
+    const [tRaw] = pxToData(x,y);
+    const maxT = dataPoints[dataPoints.length-1].t;
+    const t = Math.min(Math.max(tRaw,0), maxT);
+    hoverActive = true; hoverT = t;
+    const seg = currentSegmentAt(t);
+    const temp = tempAt(t, seg);
+    const frac = seg.type==='phase' ? Math.min(1,Math.max(0,(t-seg.tStart)/(seg.tEnd-seg.tStart))) : 0;
+    drawParticles(temp, seg.name, frac);
+    document.getElementById('phaseTag').textContent = phaseLabelKor[seg.name] + ' · ' + formatTime(t) + ' 지점';
+    drawChart();
+  }
+
+  chartCanvas.addEventListener('mousedown', (e)=>{
+    if(running || finished) return;
+    isDrawingPrediction = true;
+    addPredictionPointFromEvent(e, true);
+  });
+  chartCanvas.addEventListener('mousemove', (e)=>{
+    if(isDrawingPrediction){
+      if(running || finished) return;
+      addPredictionPointFromEvent(e, false);
+      return;
+    }
+    handleHoverScrub(e);
+  });
+  window.addEventListener('mouseup', ()=>{ isDrawingPrediction = false; });
+  chartCanvas.addEventListener('mouseleave', ()=>{
+    if(hoverActive){ hoverActive=false; drawChart(); restoreParticleViewToCurrent(); }
+  });
+
+  // touch support for tablets
+  chartCanvas.addEventListener('touchstart', (e)=>{
+    if(running || finished) return;
+    isDrawingPrediction = true;
+    addPredictionPointFromEvent(e.touches[0], true);
+    e.preventDefault();
+  }, {passive:false});
+  chartCanvas.addEventListener('touchmove', (e)=>{
+    if(!isDrawingPrediction || running || finished) return;
+    addPredictionPointFromEvent(e.touches[0], false);
+    e.preventDefault();
+  }, {passive:false});
+  window.addEventListener('touchend', ()=>{ isDrawingPrediction = false; });
+
+  // ---------- drawing: chart ----------
+  function drawChart(){
+    cctx.clearRect(0,0,CW,CH);
+    // grid
+    cctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    cctx.lineWidth = 1;
+    cctx.font = '11px JetBrains Mono';
+    cctx.fillStyle = '#7f9aa5';
+    for(let temp=Y_MIN; temp<=Y_MAX; temp+=20){
+      const [,y] = dataToPx(0, temp);
+      cctx.beginPath(); cctx.moveTo(PAD.l,y); cctx.lineTo(CW-PAD.r,y); cctx.stroke();
+      cctx.fillText(temp+'°C', 4, y+4);
+    }
+    const TICK_STEP = 30; // seconds — fixed grid, so ticks always land on clean 0:00 / 0:30 / 1:00...
+    let lastLabelX = -Infinity;
+    for(let t = Math.ceil(xViewStart/TICK_STEP)*TICK_STEP; t <= xViewEnd; t += TICK_STEP){
+      const [x,] = dataToPx(t,Y_MIN);
+      cctx.beginPath(); cctx.moveTo(x,PAD.t); cctx.lineTo(x,CH-PAD.b); cctx.stroke();
+      if(x - lastLabelX >= 26){
+        cctx.fillText(formatTime(t), x-12, CH-PAD.b+16);
+        lastLabelX = x;
+      }
+    }
+
+    // axis titles, placed at the end of each axis
+    cctx.font = '12px JetBrains Mono';
+    cctx.fillStyle = '#cfe3ea';
+    cctx.textAlign = 'left';
+    cctx.fillText('온도(°C)', PAD.l-4, 16);
+    cctx.textAlign = 'right';
+    cctx.fillText('시간(분)', CW-PAD.r, CH-8);
+    cctx.textAlign = 'left';
+
+    // melting / boiling dashed reference lines — only shown once the student reveals them,
+    // so the flat plateaus have to be found by observation first, not read off an answer key
+    if(showAnswerLines){
+      const tb = PRESSURES[pIndex].tb;
+      [ [0,'녹는점 0°C', '#6EC3E0'], [tb, '끓는점 '+tb+'°C', '#FF8A3D'] ].forEach(([temp,label,color])=>{
+        const [,y] = dataToPx(0,temp);
+        cctx.save();
+        cctx.setLineDash([5,4]);
+        cctx.strokeStyle = color; cctx.globalAlpha=0.6;
+        cctx.beginPath(); cctx.moveTo(PAD.l,y); cctx.lineTo(CW-PAD.r,y); cctx.stroke();
+        cctx.restore();
+        cctx.fillStyle = color;
+        cctx.font = 'bold 24px JetBrains Mono';
+        const lw = cctx.measureText(label).width;
+        cctx.fillText(label, CW-PAD.r-lw-8, y-10);
+      });
+    }
+
+    // past runs (ghost)
+    pastRuns.forEach(run=>{
+      cctx.strokeStyle = run.color;
+      cctx.globalAlpha = 0.8;
+      cctx.setLineDash([2,3]);
+      cctx.lineWidth = 2;
+      cctx.beginPath();
+      run.points.forEach((p,i)=>{
+        const [x,y] = dataToPx(p.t,p.temp);
+        if(i===0) cctx.moveTo(x,y); else cctx.lineTo(x,y);
+      });
+      cctx.stroke();
+      cctx.setLineDash([]);
+      cctx.globalAlpha=1;
+    });
+
+    // prediction line
+    if(predictionPoints.length>0){
+      cctx.strokeStyle = '#ffb37a';
+      cctx.setLineDash([6,5]);
+      cctx.lineWidth = 2;
+      cctx.beginPath();
+      predictionPoints.forEach((p,i)=>{
+        const [x,y] = dataToPx(p.t,p.temp);
+        if(i===0) cctx.moveTo(x,y); else cctx.lineTo(x,y);
+      });
+      cctx.stroke();
+      cctx.setLineDash([]);
+      predictionPoints.forEach(p=>{
+        const [x,y] = dataToPx(p.t,p.temp);
+        cctx.fillStyle = '#ffb37a';
+        cctx.beginPath(); cctx.arc(x,y,3,0,Math.PI*2); cctx.fill();
+      });
+    }
+
+    // actual curve
+    if(dataPoints.length>0){
+      cctx.strokeStyle = '#FF8A3D';
+      cctx.lineWidth = 3;
+      cctx.shadowColor = 'rgba(255,138,61,0.6)';
+      cctx.shadowBlur = 8;
+      cctx.beginPath();
+      dataPoints.forEach((p,i)=>{
+        const [x,y] = dataToPx(p.t,p.temp);
+        if(i===0) cctx.moveTo(x,y); else cctx.lineTo(x,y);
+      });
+      cctx.stroke();
+      cctx.shadowBlur = 0;
+      // glowing head point
+      const last = dataPoints[dataPoints.length-1];
+      const [hx,hy] = dataToPx(last.t,last.temp);
+      cctx.fillStyle = '#FFD9B3';
+      cctx.beginPath(); cctx.arc(hx,hy,5,0,Math.PI*2); cctx.fill();
+    }
+
+    // hover crosshair — shows exactly where on the curve the particle view is replaying
+    if(hoverActive){
+      const seg = currentSegmentAt(hoverT);
+      const temp = tempAt(hoverT, seg);
+      const [hx,hy] = dataToPx(hoverT, temp);
+      cctx.save();
+      cctx.setLineDash([3,3]);
+      cctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      cctx.beginPath(); cctx.moveTo(hx,PAD.t); cctx.lineTo(hx,CH-PAD.b); cctx.stroke();
+      cctx.restore();
+      cctx.fillStyle = '#ffffff';
+      cctx.beginPath(); cctx.arc(hx,hy,5,0,Math.PI*2); cctx.fill();
+      cctx.strokeStyle = '#FF8A3D'; cctx.lineWidth = 2;
+      cctx.beginPath(); cctx.arc(hx,hy,5,0,Math.PI*2); cctx.stroke();
+      cctx.fillStyle = '#EAF2F5';
+      cctx.font = 'bold 12px JetBrains Mono';
+      const label = formatTime(hoverT)+' · '+temp.toFixed(1)+'°C';
+      const lw = cctx.measureText(label).width;
+      let lx = hx+8; if(lx+lw > CW-PAD.r) lx = hx-lw-8;
+      cctx.fillText(label, lx, Math.max(PAD.t+12, hy-10));
+    }
+  }
+
+  // ---------- drawing: particles ----------
+  const PARTICLE_COLOR = '#9FE6DC'; // same substance, same color in every phase — always
+
+  function drawParticles(currentTemp, segName, frac){
+    pctx.clearRect(0,0,PW,PH);
+    const w = orderWeights(segName, frac);
+
+    // background tint blends smoothly with the dominant arrangement, never a hard cut
+    const bg = {r:11,g:36,b:48}; // solid tint base
+    const bgLiquid = {r:6,g:42,b:40};
+    const bgGas = {r:23,g:29,b:26};
+    const r = Math.round(bg.r*w.solid + bgLiquid.r*w.liquid + bgGas.r*w.gas);
+    const g = Math.round(bg.g*w.solid + bgLiquid.g*w.liquid + bgGas.g*w.gas);
+    const b = Math.round(bg.b*w.solid + bgLiquid.b*w.liquid + bgGas.b*w.gas);
+    pctx.fillStyle = `rgb(${r},${g},${b})`;
+    pctx.fillRect(0,0,PW,PH);
+
+    // the container: open-top beaker. Solid & liquid always stay inside these walls;
+    // once particles become gas they're free to drift out past the rim into open space.
+    pctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    pctx.lineWidth = 2;
+    pctx.beginPath();
+    pctx.moveTo(CONTAINER.left, CONTAINER.top-6);
+    pctx.lineTo(CONTAINER.left, CONTAINER.bottom);
+    pctx.lineTo(CONTAINER.right, CONTAINER.bottom);
+    pctx.lineTo(CONTAINER.right, CONTAINER.top-6);
+    pctx.stroke();
+    // little rim flares, like a beaker lip
+    pctx.beginPath();
+    pctx.moveTo(CONTAINER.left-4, CONTAINER.top-8); pctx.lineTo(CONTAINER.left+4, CONTAINER.top-2);
+    pctx.moveTo(CONTAINER.right+4, CONTAINER.top-8); pctx.lineTo(CONTAINER.right-4, CONTAINER.top-2);
+    pctx.stroke();
+
+    const now = performance.now()/1000;
+
+    // ---- macroscopic ice/water fill, so it's visually obvious (not just dots) ----
+    // how much of the container is solid ice vs liquid water right now
+    const fillMaxH = (CONTAINER.bottom-CONTAINER.top)*0.8;
+    let solidH=0, waterH=0;
+    if(segName==='ice-heat'){ solidH = fillMaxH; }
+    else if(segName==='melting'){ solidH = fillMaxH*(1-frac); waterH = fillMaxH*frac; }
+    else if(segName==='water-heat'){ waterH = fillMaxH; }
+    else if(segName==='vaporizing'){ waterH = fillMaxH*(1-frac); }
+    // steam-heat: both stay 0 — it has all boiled away
+
+    if(waterH>0.5){
+      const waterTop = CONTAINER.bottom - waterH;
+      pctx.fillStyle = 'rgba(95,224,204,0.32)';
+      pctx.beginPath();
+      pctx.moveTo(CONTAINER.left+2, CONTAINER.bottom);
+      pctx.lineTo(CONTAINER.left+2, waterTop);
+      // gentle wavy surface
+      const waveAmp = segName==='vaporizing' ? 2.2 : 1;
+      for(let x=CONTAINER.left+2; x<=CONTAINER.right-2; x+=6){
+        const wy = waterTop + Math.sin(now*2 + x*0.25)*waveAmp;
+        pctx.lineTo(x, wy);
+      }
+      pctx.lineTo(CONTAINER.right-2, CONTAINER.bottom);
+      pctx.closePath();
+      pctx.fill();
+
+      // rising bubbles while boiling
+      if(segName==='vaporizing'){
+        for(let i=0;i<7;i++){
+          const bx = CONTAINER.left+14 + (i*13 + (now*18)%13);
+          const cycle = (now*0.6 + i*0.37) % 1;
+          const by = CONTAINER.bottom - cycle*waterH*0.9;
+          if(by > waterTop+3){
+            pctx.beginPath();
+            pctx.fillStyle = `rgba(255,255,255,${0.35*(1-cycle)})`;
+            pctx.arc(bx, by, 1.6, 0, Math.PI*2);
+            pctx.fill();
+          }
+        }
+      }
+    }
+
+    if(solidH>0.5){
+      const iceBottom = waterH>0.5 ? (CONTAINER.bottom-waterH) : CONTAINER.bottom;
+      const iceTop = iceBottom - solidH;
+      const iceLeft = CONTAINER.left+9, iceRight = CONTAINER.right-9;
+      pctx.fillStyle = 'rgba(210,240,248,0.55)';
+      pctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      pctx.lineWidth = 1;
+      const rad = 6;
+      pctx.beginPath();
+      pctx.moveTo(iceLeft+rad, iceTop);
+      pctx.lineTo(iceRight-rad, iceTop);
+      pctx.quadraticCurveTo(iceRight, iceTop, iceRight, iceTop+rad);
+      pctx.lineTo(iceRight, iceBottom);
+      pctx.lineTo(iceLeft, iceBottom);
+      pctx.lineTo(iceLeft, iceTop+rad);
+      pctx.quadraticCurveTo(iceLeft, iceTop, iceLeft+rad, iceTop);
+      pctx.closePath();
+      pctx.fill(); pctx.stroke();
+      // an evenly-spaced lattice grid — a visual echo of the ordered crystal
+      // structure of a solid (matches the regular particle grid drawn on top)
+      pctx.strokeStyle = 'rgba(255,255,255,0.38)';
+      pctx.lineWidth = 1;
+      const gridCols = 4, gridRows = 4;
+      pctx.beginPath();
+      for(let c=1;c<gridCols;c++){
+        const gx = iceLeft + (iceRight-iceLeft)*c/gridCols;
+        pctx.moveTo(gx, iceTop+3); pctx.lineTo(gx, iceBottom-3);
+      }
+      for(let r=1;r<gridRows;r++){
+        const gy = iceTop + (iceBottom-iceTop)*r/gridRows;
+        pctx.moveTo(iceLeft+3, gy); pctx.lineTo(iceRight-3, gy);
+      }
+      pctx.stroke();
+    }
+
+    // vibration/motion SPEED depends only on temperature (constant during a plateau).
+    // ARRANGEMENT (order weights) depends only on how far through the phase change we are.
+    // Keeping these two independent is the whole point of the demo.
+    const solidAmp = 1.5 + (currentTemp-T_START)*0.06;
+    const liquidSpeed = 0.5 + Math.max(0,currentTemp)*0.02;
+    const gasSpeed = 1.6 + Math.max(0,currentTemp)*0.03;
+
+    particles.forEach(p=>{
+      // lattice (solid) position — small vibration around a fixed site
+      const sx = p.lx + Math.sin(now*3 + p.phaseOffset)*solidAmp;
+      const sy = p.ly + Math.cos(now*2.7 + p.phaseOffset)*solidAmp;
+
+      // liquid wander — continuously updated so it's always "live", never a sudden start
+      // (bounded by the container walls — liquid takes the shape of its vessel)
+      p.x += p.vx*liquidSpeed; p.y += p.vy*liquidSpeed;
+      if(Math.random()<0.02){ p.vx += (Math.random()-0.5)*0.4; p.vy += (Math.random()-0.5)*0.4; }
+      const lPad=10;
+      const lxMin=CONTAINER.left+lPad, lxMax=CONTAINER.right-lPad, lyMin=CONTAINER.top+lPad, lyMax=CONTAINER.bottom-lPad;
+      if(p.x<lxMin||p.x>lxMax) p.vx*=-1;
+      if(p.y<lyMin||p.y>lyMax) p.vy*=-1;
+      p.x = Math.max(lxMin,Math.min(lxMax,p.x));
+      p.y = Math.max(lyMin,Math.min(lyMax,p.y));
+
+      // gas flight — continuously updated in the background too
+      p.gx += p.gvx*gasSpeed; p.gy += p.gvy*gasSpeed;
+      const gm=6;
+      if(p.gx<gm||p.gx>PW-gm) p.gvx*=-1;
+      if(p.gy<gm||p.gy>PH-gm) p.gvy*=-1;
+      p.gx = Math.max(gm,Math.min(PW-gm,p.gx));
+      p.gy = Math.max(gm,Math.min(PH-gm,p.gy));
+
+      // During vaporizing specifically, don't dilate every particle together — real
+      // boiling is individual molecules escaping one at a time. Each particle has its
+      // own escape moment (vapThresh); once the boil progress passes it, THAT particle
+      // quickly (but smoothly) peels off into full free-flight gas motion. This makes
+      // escaping particles clearly, individually visible against the still-liquid rest,
+      // instead of the whole group slowly and uniformly spreading out.
+      let wLiquid = w.liquid, wGas = w.gas;
+      if(segName==='vaporizing'){
+        const local = Math.min(1, Math.max(0, (frac - p.vapThresh)/0.08));
+        wGas = local; wLiquid = 1-local;
+      }
+
+      // final drawn position: a smooth continuous blend of all three — this is the
+      // "regular lattice gradually becomes disordered" animation, with no jumps
+      const dx = sx*w.solid + p.x*wLiquid + p.gx*wGas;
+      const dy = sy*w.solid + p.y*wLiquid + p.gy*wGas;
+
+      // a faint motion streak scales with how "gas-like" this moment is (not a color change)
+      if(wGas>0.02){
+        pctx.strokeStyle = PARTICLE_COLOR;
+        pctx.globalAlpha = 0.3*wGas;
+        pctx.lineWidth = 2;
+        pctx.beginPath();
+        pctx.moveTo(dx - p.gvx*gasSpeed*2, dy - p.gvy*gasSpeed*2);
+        pctx.lineTo(dx, dy);
+        pctx.stroke();
+      }
+
+      pctx.beginPath();
+      pctx.fillStyle = PARTICLE_COLOR;
+      pctx.globalAlpha = 0.95;
+      pctx.arc(dx,dy, 3.2, 0, Math.PI*2);
+      pctx.fill();
+    });
+    pctx.globalAlpha=1;
+  }
+
+  // ---------- readouts ----------
+  const phaseLabelKor = {
+    'ice-heat':'고체 (얼음)', 'melting':'융해 중 (고체→액체)', 'water-heat':'액체 (물)',
+    'vaporizing':'기화 중 (액체→기체)', 'steam-heat':'기체 (수증기)'
+  };
+  function updateReadouts(temp, seg){
+    document.getElementById('roTime').textContent = formatTime(simTime);
+    document.getElementById('roTemp').textContent = temp.toFixed(1)+' °C';
+    document.getElementById('roPhase').textContent = phaseLabelKor[seg.name];
+    document.getElementById('roEnergy').textContent = Math.round(P_POWER*simTime).toLocaleString()+' J';
+    document.getElementById('phaseTag').textContent = phaseLabelKor[seg.name];
+    const pw = document.getElementById('progressWrap');
+    if(seg.type==='phase'){
+      pw.classList.add('show');
+      const frac = Math.min(1,Math.max(0,(simTime-seg.tStart)/(seg.tEnd-seg.tStart)));
+      document.getElementById('progressFill').style.width = (frac*100).toFixed(0)+'%';
+      document.getElementById('progressLabel').textContent = seg.label+' 진행률';
+    } else {
+      pw.classList.remove('show');
+    }
+  }
+
+  function currentSegmentAt(t){
+    for(const seg of segments){
+      if(t <= seg.tEnd || seg===segments[segments.length-1]) return seg;
+    }
+    return segments[segments.length-1];
+  }
+  function tempAt(t, seg){
+    if(seg.type==='phase') return seg.tempStart;
+    const frac = seg.tEnd>seg.tStart ? (t-seg.tStart)/(seg.tEnd-seg.tStart) : 1;
+    return seg.tempStart + (seg.tempEnd-seg.tempStart)*Math.min(1,Math.max(0,frac));
+  }
+  // continuous "how ordered vs disordered" blend weights — no particle ever jumps state abruptly
+  function orderWeights(name, frac){
+    if(name==='ice-heat')    return {solid:1, liquid:0,    gas:0};
+    if(name==='melting')     return {solid:1-frac, liquid:frac, gas:0};
+    if(name==='water-heat')  return {solid:0, liquid:1,    gas:0};
+    if(name==='vaporizing')  return {solid:0, liquid:1-frac, gas:frac};
+    if(name==='steam-heat')  return {solid:0, liquid:0,    gas:1};
+  }
+
+  let lastPushed = -1;
+  let tailElapsed = 0;
+  const TAIL_SECONDS = 5; // keep the animation running a bit after reaching the end, don't cut off instantly
+  function loop(ts){
+    if(!running) return;
+    if(lastTs===null) lastTs = ts;
+    const dtWall = (ts-lastTs)/1000;
+    lastTs = ts;
+    const rate = totalSimSeconds / BASE_WALL_SECONDS;
+    const reachedEnd = simTime >= totalSimSeconds;
+    if(!reachedEnd){
+      const segBefore = currentSegmentAt(simTime);
+      const speedMult = segBefore.name==='vaporizing' ? 4 : (segBefore.name==='ice-heat' ? 1/4 : 1); // boiling 4x faster, ice warming 4x slower (~4-5s)
+      simTime = Math.min(totalSimSeconds, simTime + dtWall*rate*speedMult);
+    }
+
+    const seg = currentSegmentAt(simTime);
+    const temp = tempAt(simTime, seg);
+    const frac = seg.type==='phase' ? Math.min(1,Math.max(0,(simTime-seg.tStart)/(seg.tEnd-seg.tStart))) : 0;
+
+    drawParticles(temp, seg.name, frac);
+    updateReadouts(temp, seg);
+
+    if(!reachedEnd && simTime - lastPushed > totalSimSeconds/200){
+      dataPoints.push({t:simTime, temp});
+      lastPushed = simTime;
+    }
+    updateXView();
+    drawChart();
+
+    if(reachedEnd){
+      tailElapsed += dtWall;
+      if(tailElapsed >= TAIL_SECONDS){
+        running = false; finished = true;
+        if(dataPoints.length===0 || dataPoints[dataPoints.length-1].t !== simTime){
+          dataPoints.push({t:simTime, temp});
+        }
+        updateXView();
+        drawChart();
+        startBtn.textContent = '실험 완료 ✓';
+        startBtn.disabled = true;
+        pauseBtn.disabled = true;
+        return;
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- init ----------
+  recompute();
+  drawChart();
+  updateReadouts(T_START, segments[0]);
+  drawParticles(T_START, 'ice-heat', 0);
+
+  // ================= student / teacher mode =================
+  const modeStudentBtn = document.getElementById('modeStudentBtn');
+  const modeTeacherBtn = document.getElementById('modeTeacherBtn');
+  const studentView = document.getElementById('studentView');
+  const teacherView = document.getElementById('teacherView');
+
+  modeStudentBtn.addEventListener('click', ()=>{
+    modeStudentBtn.classList.add('active');
+    modeTeacherBtn.classList.remove('active');
+    studentView.style.display = '';
+    teacherView.style.display = 'none';
+  });
+  modeTeacherBtn.addEventListener('click', ()=>{
+    modeTeacherBtn.classList.add('active');
+    modeStudentBtn.classList.remove('active');
+    studentView.style.display = 'none';
+    teacherView.style.display = '';
+    if(teacherAuthenticated){
+      teacherGate.style.display = 'none';
+      teacherContent.style.display = '';
+      loadSubmissions();
+    } else {
+      teacherGate.style.display = '';
+      teacherContent.style.display = 'none';
+    }
+  });
+
+  // ================= teacher password gate =================
+  // fixed password — there's no in-app way to change it, so it lives here as a constant.
+  const TEACHER_PASSWORD = '3203';
+  const teacherGate = document.getElementById('teacherGate');
+  const teacherContent = document.getElementById('teacherContent');
+  const teacherPwInput = document.getElementById('teacherPwInput');
+  const teacherEnterBtn = document.getElementById('teacherEnterBtn');
+  let teacherAuthenticated = false;
+
+  teacherEnterBtn.addEventListener('click', ()=>{
+    const entered = teacherPwInput.value;
+    if(!entered){
+      alert('비밀번호를 입력해주세요.');
+      return;
+    }
+    if(entered === TEACHER_PASSWORD){
+      teacherAuthenticated = true;
+      teacherPwInput.value = '';
+      teacherGate.style.display = 'none';
+      teacherContent.style.display = '';
+      loadSubmissions();
+    } else {
+      alert('비밀번호가 올바르지 않습니다.');
+    }
+  });
+  teacherPwInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') teacherEnterBtn.click(); });
+
+  // ================= access gate: block entry until a valid 5-digit ID + name are given =================
+  const accessGate = document.getElementById('accessGate');
+  const studentContent = document.getElementById('studentContent');
+  const gateIdInput = document.getElementById('gateIdInput');
+  const gateNameInput = document.getElementById('gateNameInput');
+  const gateEnterBtn = document.getElementById('gateEnterBtn');
+  const verifiedTag = document.getElementById('verifiedTag');
+  let verifiedStudentId = null, verifiedStudentName = null;
+
+  gateEnterBtn.addEventListener('click', ()=>{
+    const id = gateIdInput.value.trim();
+    const name = gateNameInput.value.trim();
+    if(!id || !name){
+      alert('학번과 이름을 모두 입력해야 입장할 수 있습니다.');
+      return;
+    }
+    if(!/^\d{5}$/.test(id)){
+      alert('학번은 숫자 5자리로 입력해주세요. (예: 10100)');
+      return;
+    }
+    verifiedStudentId = id;
+    verifiedStudentName = name;
+    verifiedTag.textContent = id + ' ' + name;
+    accessGate.style.display = 'none';
+    studentContent.style.display = '';
+  });
+
+  // ================= student: submit to shared storage =================
+  const submitBtn = document.getElementById('submitBtn');
+  const submitStatus = document.getElementById('submitStatus');
+  const qIds = ['q1','q2','q3','q4','q5','q6'];
+  const qWarnLabels = ['예측','발견','질문','비교(양)','비교(압력)','설명'];
+
+  // "meaningful" = has at least one actual letter/number (Hangul, English, or digit) —
+  // blank, whitespace-only, or symbols-only ("...", "!!!", "ㅁㄴㅇ" etc. are still allowed since
+  // they're Hangul jamo, but pure punctuation/emoji-only is rejected) doesn't count.
+  function hasMeaningfulContent(text){
+    return /[a-zA-Z0-9가-힣]/.test((text||'').trim());
+  }
+
+  submitBtn.addEventListener('click', async ()=>{
+    if(!verifiedStudentId || !verifiedStudentName){
+      alert('학번/이름 확인이 필요합니다. 페이지를 새로고침한 뒤 다시 입장해주세요.');
+      return;
+    }
+    for(let i=0;i<qIds.length;i++){
+      const val = document.getElementById(qIds[i]).value;
+      if(!hasMeaningfulContent(val)){
+        alert('"' + qWarnLabels[i] + '" 질문에 내용을 입력해주세요. (빈 칸이거나 특수문자만 입력하면 제출할 수 없습니다)');
+        document.getElementById(qIds[i]).focus();
+        return;
+      }
+    }
+    const studentId = verifiedStudentId, name = verifiedStudentName;
+    const payload = {
+      studentId, name,
+      submittedAt: new Date().toISOString(),
+      mass, atm: PRESSURES[pIndex].atm, tb: PRESSURES[pIndex].tb,
+      answers: qIds.map(id => document.getElementById(id).value)
+    };
+    const safeId = studentId.replace(/[\s\/\\'"]/g,'_');
+    const safeName = name.replace(/[\s\/\\'"]/g,'_');
+    const key = 'submission:' + safeId + '_' + safeName + '_' + Date.now();
+    submitBtn.disabled = true;
+    submitStatus.style.color = 'var(--muted)';
+    submitStatus.textContent = '제출 중...';
+    try{
+      const result = await window.storage.set(key, JSON.stringify(payload), true);
+      if(result){
+        submitStatus.textContent = '제출 완료 ✓ (' + studentId + ' ' + name + ')';
+        submitStatus.style.color = 'var(--amber)';
+      } else {
+        submitStatus.textContent = '제출 실패, 다시 시도해주세요';
+        submitStatus.style.color = 'var(--danger)';
+      }
+    } catch(e){
+      submitStatus.textContent = '제출 실패: 저장소 오류';
+      submitStatus.style.color = 'var(--danger)';
+    }
+    submitBtn.disabled = false;
+  });
+
+  // ================= teacher: load / render / clear / export submissions =================
+  const refreshBtn = document.getElementById('refreshSubmissionsBtn');
+  const clearBtn = document.getElementById('clearSubmissionsBtn');
+  const copySheetBtn = document.getElementById('copySheetBtn');
+  const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+  const teacherStatus = document.getElementById('teacherStatus');
+  const submissionsList = document.getElementById('submissionsList');
+  const qLabels = ['예측','발견','질문','비교(양)','비교(압력)','설명'];
+  let loadedRows = []; // cached so copy/CSV export doesn't need a re-fetch
+
+  refreshBtn.addEventListener('click', loadSubmissions);
+
+  async function loadSubmissions(){
+    teacherStatus.textContent = '불러오는 중...';
+    submissionsList.innerHTML = '';
+    loadedRows = [];
+    try{
+      const listResult = await window.storage.list('submission:', true);
+      const keys = (listResult && listResult.keys) ? listResult.keys : [];
+      if(keys.length===0){
+        teacherStatus.textContent = '제출된 데이터가 없습니다';
+        return;
+      }
+      const rows = [];
+      for(const k of keys){
+        try{
+          const r = await window.storage.get(k, true);
+          if(r && r.value) rows.push({key:k, data: JSON.parse(r.value)});
+        } catch(e){ /* skip unreadable entries */ }
+      }
+      rows.sort((a,b)=> new Date(b.data.submittedAt) - new Date(a.data.submittedAt));
+      loadedRows = rows;
+      teacherStatus.textContent = rows.length + '명 제출됨';
+      renderSubmissions(rows);
+    } catch(e){
+      teacherStatus.textContent = '불러오기 실패: 저장소 오류';
+    }
+  }
+
+  function renderSubmissions(rows){
+    if(rows.length===0){ submissionsList.innerHTML = ''; return; }
+    const table = document.createElement('div');
+    rows.forEach(({key,data})=>{
+      const card = document.createElement('div');
+      card.style.cssText = 'background:rgba(0,0,0,0.25);border-radius:10px;padding:12px 14px;margin-bottom:10px;';
+      const when = new Date(data.submittedAt);
+      const whenStr = when.toLocaleString('ko-KR');
+      let answersHtml = '';
+      (data.answers||[]).forEach((ans, i)=>{
+        answersHtml += `<div style="margin-top:6px;"><span style="color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:0.72rem;">${qLabels[i]||('Q'+(i+1))}</span><div style="font-size:0.83rem;color:var(--text);white-space:pre-wrap;">${(ans||'(작성 안함)').replace(/</g,'&lt;')}</div></div>`;
+      });
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline;">
+          <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;">${(data.studentId||'-').toString().replace(/</g,'&lt;')} · ${(data.name||'이름없음').replace(/</g,'&lt;')}</div>
+          <div class="mono" style="font-size:0.72rem;color:var(--muted);">${whenStr}</div>
+        </div>
+        <div class="mono" style="font-size:0.72rem;color:var(--muted);margin-top:4px;">${data.mass}g · ${data.atm}atm · 끓는점 ${data.tb}°C</div>
+        ${answersHtml}
+      `;
+      table.appendChild(card);
+    });
+    submissionsList.appendChild(table);
+  }
+
+  // shared helpers to build a table (2D array) from the cached rows — used by both exports
+  function buildExportTable(){
+    const header = ['학번','이름','제출시각','질량(g)','압력(atm)','끓는점(°C)', ...qLabels];
+    const clean = (s) => (s===undefined||s===null) ? '' : String(s).replace(/[\t\r\n]+/g, ' ').trim();
+    const body = loadedRows.map(({data})=>{
+      const when = new Date(data.submittedAt).toLocaleString('ko-KR');
+      return [
+        clean(data.studentId), clean(data.name), clean(when),
+        clean(data.mass), clean(data.atm), clean(data.tb),
+        ...qLabels.map((_,i)=> clean((data.answers||[])[i]))
+      ];
+    });
+    return [header, ...body];
+  }
+
+  copySheetBtn.addEventListener('click', async ()=>{
+    if(loadedRows.length===0){ teacherStatus.textContent = '먼저 새로고침으로 데이터를 불러오세요'; return; }
+    const table = buildExportTable();
+    const tsv = table.map(row => row.join('\t')).join('\n');
+    try{
+      await navigator.clipboard.writeText(tsv);
+      teacherStatus.textContent = '복사 완료! 구글 시트 A1 셀에 붙여넣기(Ctrl+V) 하세요';
+    } catch(e){
+      teacherStatus.textContent = '복사 실패 — 브라우저 클립보드 권한을 확인해주세요';
+    }
+  });
+
+  downloadCsvBtn.addEventListener('click', ()=>{
+    if(loadedRows.length===0){ teacherStatus.textContent = '먼저 새로고침으로 데이터를 불러오세요'; return; }
+    const table = buildExportTable();
+    const csv = '\uFEFF' + table.map(row =>
+      row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(',')
+    ).join('\r\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '학생제출데이터_' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    teacherStatus.textContent = 'CSV 파일이 다운로드되었습니다';
+  });
+
+  clearBtn.addEventListener('click', async ()=>{
+    if(!confirm('모든 학생 제출 데이터를 삭제할까요? 되돌릴 수 없습니다.')) return;
+    teacherStatus.textContent = '삭제 중...';
+    try{
+      const listResult = await window.storage.list('submission:', true);
+      const keys = (listResult && listResult.keys) ? listResult.keys : [];
+      for(const k of keys){
+        try{ await window.storage.delete(k, true); } catch(e){}
+      }
+      teacherStatus.textContent = '모두 삭제되었습니다';
+      submissionsList.innerHTML = '';
+      loadedRows = [];
+    } catch(e){
+      teacherStatus.textContent = '삭제 실패: 저장소 오류';
+    }
+  });
+})();
+</script>
+</body>
+</html>
